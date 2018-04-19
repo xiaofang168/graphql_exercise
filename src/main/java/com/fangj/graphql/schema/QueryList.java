@@ -1,6 +1,8 @@
 package com.fangj.graphql.schema;
 
 import com.alibaba.fastjson.JSON;
+import com.fangj.graphql.DataContainer;
+import com.fangj.graphql.GraphQLObjectTypeEnum;
 import com.fangj.graphql.bean.Address;
 import com.fangj.graphql.bean.Person;
 import graphql.ExecutionResult;
@@ -14,8 +16,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
-import static graphql.Scalars.GraphQLInt;
-import static graphql.Scalars.GraphQLString;
 import static graphql.schema.GraphQLFieldDefinition.newFieldDefinition;
 import static graphql.schema.GraphQLObjectType.newObject;
 
@@ -27,43 +27,11 @@ public class QueryList {
 
     public static void main(String[] args) {
 
-        GraphQLObjectType addressType = newObject()
-                .name("address")
-                .field(newFieldDefinition().name("city").type(GraphQLString))
-                .field(newFieldDefinition().name("street").type(GraphQLString))
-                .build();
+        GraphQLObjectType addressType = GraphQLObjectTypeEnum.ADDRESS.getType();
 
-        GraphQLObjectType personType = newObject()
-                .name("person")
-                .field(newFieldDefinition().name("age").type(GraphQLInt))
-                .field(newFieldDefinition().name("userName").type(GraphQLString))
-                .field(newFieldDefinition().name("sex").type(GraphQLInt))
-                .field(newFieldDefinition().name("addresses").type(new GraphQLList(addressType)))
-                .build();
+        GraphQLObjectType personType = GraphQLObjectTypeEnum.PERSON.getType();
 
-        DataFetcher<List<Person>> personListDataFetcher = environment -> {
-            Person person = new Person();
-            person.setUserName("张三");
-            person.setAge(30);
-            person.setSex(1);
-            Address address = new Address();
-            address.setCity("北京市");
-            address.setStreet("望京");
-
-            Person person2 = new Person();
-            person2.setUserName("李四");
-            person2.setAge(32);
-            person2.setSex(0);
-            Address address2 = new Address();
-            address2.setCity("天津市");
-            address2.setStreet("河西");
-
-            person.setAddresses(Arrays.asList(address));
-
-            person2.setAddresses(Arrays.asList(address2));
-
-            return Arrays.asList(person, person2);
-        };
+        DataFetcher<List<Person>> personListDataFetcher = environment -> DataContainer.personList;
 
         GraphQLObjectType queryList = newObject()
                 .name("queryList")
@@ -90,16 +58,31 @@ public class QueryList {
         GraphQLSchema graphQLSchema = GraphQLSchema.newSchema().query(queryList).build();
         GraphQL build = GraphQL.newGraphQL(graphQLSchema).build();
         ExecutionResult executionResult = build.execute("{persons {userName,age,sex}}");
-
         Map<String, Object> map = executionResult.getData();
         System.out.println(JSON.toJSONString(map));
 
         GraphQLSchema graphQLSchema1 = GraphQLSchema.newSchema().query(queryOne).build();
         GraphQL build1 = GraphQL.newGraphQL(graphQLSchema1).build();
         ExecutionResult executionResult1 = build1.execute("{person {userName, age, sex, addresses {city}}}");
-
         Map<String, Object> map1 = executionResult1.getData();
         System.out.println(JSON.toJSONString(map1));
+
+        GraphQLObjectType queryAddress = newObject()
+                .name("queryAddress")
+                .description("query address")
+                .field(newFieldDefinition().name("addresses").type(new GraphQLList(addressType)).dataFetcher(environment -> {
+                    Address a = new Address();
+                    a.setStreet("河西区");
+                    a.setCity("天津市");
+                    return Arrays.asList(a);
+                }))
+                .build();
+        GraphQLSchema graphQLSchema2 = GraphQLSchema.newSchema().query(queryAddress).build();
+        GraphQL build2 = GraphQL.newGraphQL(graphQLSchema2).build();
+        ExecutionResult executionResult2 = build2.execute("{addresses {city}}");
+        Map<String, Object> map2 = executionResult2.getData();
+        System.out.println(JSON.toJSONString(map2));
     }
+
 }
 
