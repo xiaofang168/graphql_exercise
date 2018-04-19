@@ -1,0 +1,12 @@
+out
+target
+dist
+buid
+logs
+*.iml
+*.ipr
+*.iws
+.idea
+.classpath
+.project
+build/*
